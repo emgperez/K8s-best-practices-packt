@@ -1,0 +1,53 @@
+# This template allows us to rewrite the configmap manifest into a Jinja2 format
+
+# This is the manifest in YAML format
+# apiVersion: v1
+# kind: ConfigMap
+# metadata:
+#   name: aws-auth
+#   namespace: kube-system
+# data:
+#   mapRoles: |
+#     - rolearn: <ARN of instance role (not instance profile)>
+#       username: system:node:{{EC2PrivateDNSName}}
+#       groups:
+#         - system:bootstrappers
+#         - system:nodes
+#
+
+# And now, instead of replicating that block for every user we want to add, let's template it so that we can freely add new roles and user without having to repeat the whole previous block N times
+#
+
+# This piece is common to all users, so it's not templated
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: aws-auth
+# And now the code that actually changes for each user. We'll use a for loop to iterate over all of them
+data:
+  mapUsers: |
+{% for user in map_users.system_masters %} # this two variables can be substituted during execution time with the values taken from the corresponding variable file (defined in "group_vars")
+    - userarn: "{{ user.arn }}"
+      username: "{{ user.name }}"
+      groups:
+         - system:masters
+{% endfor %}
+
+# This is the code for all the roles
+
+  mapRoles: | 
+{% for role in map_roles.workers_roles %}
+    - rolearn: "{{ role }}"
+      username: % raw -%} "system:node:{{ '{{' }}EC2PrivateDNSName{{ '}}' }}" {%- endraw %}
+      groups:
+         - system:bootstrappers
+         - system:nodes
+{% endfor %}
+{% for role in map_roles.system_masters %}
+    - rolearn: "{{ role }}"
+      username: {% raw -%} "admin:{{ '{{' }}SessionName{{ '}}' }}" {%- endraw %}
+      groups:
+         - system:masters
+{% endfor %}
+
+
