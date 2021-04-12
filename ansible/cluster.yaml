@@ -1,0 +1,26 @@
+# Three sections for the playbook: 1. Target hosts definition, 2. Variables the tasks might use during playbook execution, 3. List of tasks
+#
+---
+- name: deploy k8s add-ons
+  hosts: localhost
+  connection: local
+  gather_facts: no
+  # This was the hosts definition
+ 
+  # Now, onto the variables that tasks may use
+  vars:
+    Ansible_python_interpreter: "{{ Ansible_playbook_python }}"
+    k8s_kubeconfig: ~/.kube/config
+    k8s_manifests_base_dir: templates/
+    k8s_manifests_state: present
+    k8s_force: false
+    k8s_no_log: false
+
+  # List of tasks to execute against the cluster
+  tasks:
+  - import_tasks: tasks/aws-auth.yaml
+    tags: aws-auth
+  - import_tasks: tasks/namespaces.yaml
+    tags: namespaces
+ 
+  
